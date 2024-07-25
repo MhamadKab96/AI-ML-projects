@@ -1,4 +1,4 @@
-# Sustainability ChatBot Project
+# Sustainability Project Chatbot
 
 A conversational AI chatbot built using a LLM called CLAUDE, is designed to answer sustainability-related queries. This bot can answer questions and provide recommendations based on user input. 
 To run the chatbot, write python app.py in the terminal in VS Code then click the URL.
