@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mini Library</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            width: 700px;
+            margin: auto;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 10px;
+        }
+
+        input {
+            padding: 8px;
+            margin: 5px;
+            width: 70%;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 8px 14px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        .export-btn {
+            background-color: #3f51b5;
+            color: white;
+        }
+
+        .delete-btn {
+            background-color: #e53935;
+            color: white;
+        }
+
+        .checkin-btn {
+            background-color: #2e7d32;
+            color: white;
+        }
+
+        .checkout-btn {
+            background-color: #0288d1;
+            color: white;
+        }
+
+        .ai-btn {
+            background-color: #000;
+            color: white;
+            margin-left: 5px;
+        }
+
+        #flash-message {
+            margin: 10px;
+            color: green;
+            font-weight: bold;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+            text-align: left;
+        }
+
+        li {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 6px;
+            box-shadow: 0 0 4px rgba(0,0,0,0.1);
+        }
+
+        .book-title {
+            font-weight: bold;
+        }
+
+        .status-available {
+            color: red;
+        }
+
+        .status-borrowed {
+            color: green;
+        }
+    </style>
+    <script>
+        const suggestions = [
+            { title: "The Art of Simplicity", author: "Ava Blake" },
+            { title: "Chronicles of Tomorrow", author: "Max Orion" },
+            { title: "Whispers in Code", author: "Luna Sky" },
+            { title: "Fragments of Infinity", author: "Kai West" },
+            { title: "Blueprints of the Mind", author: "Nova Quinn" }
+        ];
+
+        function suggestBook() {
+            const suggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+            const titleInput = document.getElementById('title');
+            const authorInput = document.getElementById('author');
+            if (!titleInput.value) titleInput.value = suggestion.title;
+            if (!authorInput.value) authorInput.value = suggestion.author;
+            showFlash(`🤖 AI suggests: "${suggestion.title}" by ${suggestion.author}`);
+        }
+
+        function randomAIMessage(action) {
+            const messages = {
+                add: [
+                    "📚 Another masterpiece added!",
+                    "✨ That book is now immortalized.",
+                    "🧠 Smart choice! Looks interesting."
+                ],
+                borrow: [
+                    "📤 Great pick! Enjoy reading.",
+                    "🧳 Off it goes on a journey!",
+                    "🔥 That one’s a favorite!"
+                ],
+                return: [
+                    "📥 Thanks for returning it!",
+                    "🛋️ Back on the shelf it goes.",
+                    "📚 Hope you enjoyed the read!"
+                ]
+            };
+            const arr = messages[action];
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function showFlash(message) {
+            const flash = document.getElementById('flash-message');
+            flash.textContent = message;
+            setTimeout(() => { flash.textContent = ""; }, 3000);
+        }
+
+        async function loadBooks() {
+            const res = await fetch('/api/books');
+            const books = await res.json();
+            const list = document.getElementById('book-list');
+            list.innerHTML = '';
+            books.forEach(book => {
+                const item = document.createElement('li');
+                const statusClass = book.status === 'borrowed' ? 'status-borrowed' : 'status-available';
+                const statusText = book.status === 'borrowed' ? 'Borrowed' : 'Available';
+
+                item.innerHTML = `
+                    <span class="book-title">${book.title}</span> by ${book.author}
+                    <br>
+                    <span class="${statusClass}">${statusText}</span>
+                    <br>
+                    <button class="checkin-btn" onclick="updateStatus(${book.id}, 'borrowed')">✅ Check In</button>
+                    <button class="checkout-btn" onclick="updateStatus(${book.id}, 'available')">📚 Check Out</button>
+                    <button class="delete-btn" onclick="deleteBook(${book.id})">🗑 Delete</button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        async function addBook() {
+            const title = document.getElementById('title').value;
+            const author = document.getElementById('author').value;
+            if (!title || !author) return showFlash("Please fill in both fields");
+            await fetch('/api/books', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, author })
+            });
+            document.getElementById('title').value = '';
+            document.getElementById('author').value = '';
+            showFlash(randomAIMessage('add'));
+            loadBooks();
+        }
+
+        async function updateStatus(id, newStatus) {
+            await fetch(`/api/books/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            showFlash(randomAIMessage(newStatus === 'borrowed' ? 'borrow' : 'return'));
+            loadBooks();
+        }
+
+        async function deleteBook(id) {
+            const res = await fetch(`/api/books/${id}`, { method: 'DELETE' });
+            if (res.status === 204) {
+                showFlash("Book deleted successfully");
+                loadBooks();
+            }
+        }
+
+        function exportCSV() {
+            window.location.href = '/api/export';
+        }
+
+        window.onload = loadBooks;
+    </script>
+</head>
+<body>
+    <div class="container">
+        <img src="https://cdn-icons-png.flaticon.com/512/29/29302.png" class="logo" alt="AI Book Logo">
+        <h1>Welcome to the official page of the Mini Library Management System</h1>
+        <div id="flash-message"></div>
+
+        <input id="title" placeholder="Book Title">
+        <input id="author" placeholder="Author">
+        <br>
+        <button onclick="addBook()">➕ Add Book</button>
+        <button class="export-btn" onclick="exportCSV()">⬇️ Export CSV</button>
+        <a href="https://platform.openai.com/docs/guides/chat" target="_blank">
+            <button class="ai-btn">🤖 Ask AI</button>
+        </a>
+        <button onclick="suggestBook()">💡 Suggest Book</button>
+
+        <ul id="book-list"></ul>
+    </div>
+</body>
+</html>
+
